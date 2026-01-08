@@ -1,2 +1,2 @@
 # quant-risk-simulator
-I built a Monte Carlo framework to assess the distribution of outcomes and tail risks for trading strategies under different return-generating assumptions.
+Monte Carlo risk simulation engine for analyzing strategy outcome distributions, drawdowns, and tail risk in quantitative trading.
