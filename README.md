@@ -1,12 +1,12 @@
 # Quant Risk Simulator
 
-A Monte Carlo risk simulation engine for analyzing portfolio outcome distributions, drawdowns, and tail risk under multiple return-generating assumptions.
+A Monte Carlo–based risk simulation engine for analyzing portfolio outcome distributions, drawdowns, and tail risk under multiple return-generating assumptions.
 
 ---
 
 ## Overview
 
-Traditional backtests evaluate a strategy using a single historical path. While useful, this approach hides the **distribution of possible outcomes**.
+Traditional backtests evaluate a strategy using a single historical path. While useful, this approach fails to capture the full distribution of possible outcomes.
 
 This project addresses that limitation by simulating thousands of potential portfolio paths and analyzing:
 
@@ -19,11 +19,11 @@ This project addresses that limitation by simulating thousands of potential port
 
 ## Key Idea
 
-Instead of asking:
+Traditional backtesting answers:
 
-> “What happened in one backtest?”
+> “What happened?”
 
-This project asks:
+This project instead asks:
 
 > “What could happen across many plausible futures?”
 
@@ -33,7 +33,7 @@ This project asks:
 
 ### Monte Carlo Simulation
 
-* Simulates thousands of portfolio paths over a fixed horizon
+* Simulates thousands of potential portfolio paths over a fixed horizon
 * Models compounding effects of daily returns
 
 ### Multiple Return Models
@@ -113,14 +113,34 @@ quant-risk-simulator/
 
 ---
 
-## Example Insights
+### Simulated Equity Curves
+Example Monte Carlo paths under the baseline normal-return scenario.
 
-Using identical expected returns but different assumptions:
+![Simulated Equity Curves](results/baseline_normal/equity_curves.png)
 
-* Fat-tailed distributions produce **more extreme downside risk**
-* Higher volatility significantly increases **drawdown probability**
-* Historical bootstrap reveals **non-normal market behavior**
-* Even with positive expected return, **loss probability remains non-trivial**
+### Final Portfolio Value Distribution
+Histogram of terminal portfolio outcomes under the Student-t fat-tail scenario.
+
+![Final Portfolio Value Distribution](results/fat_tail_student_t/final_value_histogram.png)
+
+### Cross-Scenario Comparison
+Comparison of final portfolio outcomes across all modeled scenarios.
+
+![Cross-Scenario Comparison](results/scenario_final_value_boxplot.png)
+
+### Cross-Scenario Drawdown Comparison
+Comparison of maximum drawdowns across scenarios.
+
+![Cross-Scenario Drawdown Comparison](results/scenario_drawdown_boxplot.png)
+
+---
+
+## Key Takeaways
+
+- Fat-tailed distributions significantly increase downside risk
+- Volatility drives drawdown severity more than mean returns
+- Historical bootstrapping captures real-world non-normal behavior
+- Positive expected returns do not eliminate loss probability
 
 ---
 
@@ -164,6 +184,15 @@ py main.py
 The historical bootstrap scenario uses daily SPY returns derived from price data to simulate realistic market dynamics.
 
 If `data/historical_returns.csv` is present, the model incorporates real market behavior. Otherwise, the scenario is skipped automatically.
+
+---
+
+## Technical Highlights
+
+- Vectorized simulation for efficient large-scale Monte Carlo runs
+- Modular architecture separating return generation, simulation, and metrics
+- Support for multiple stochastic models (Gaussian, Student-t, bootstrap)
+- Robust risk metric computation (VaR, CVaR, drawdowns)
 
 ---
 
