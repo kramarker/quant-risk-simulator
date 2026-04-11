@@ -113,6 +113,8 @@ quant-risk-simulator/
 
 ---
 
+## Sample Outputs
+
 ### Simulated Equity Curves
 Example Monte Carlo paths under the baseline normal-return scenario.
 
@@ -215,5 +217,6 @@ This project provides a framework for understanding portfolio risk beyond single
 * Real market data
 
 to evaluate the full distribution of possible outcomes.
+
 
 ---
