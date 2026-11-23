@@ -1,222 +1,107 @@
 # Quant Risk Simulator
 
-A Monte Carlo–based risk simulation engine for analyzing portfolio outcome distributions, drawdowns, and tail risk under multiple return-generating assumptions.
+![tests](https://github.com/kramarker/quant-risk-simulator/actions/workflows/tests.yml/badge.svg)
+
+A Monte Carlo engine that simulates 5,000 one-year portfolio paths under four return models and compares
+the resulting distributions of terminal value, drawdown, VaR, and CVaR.
+
+A single backtest shows one path. This project asks how wide the range of plausible outcomes is, and how
+much that range depends on the return model you assume.
 
 ---
 
-## Overview
+## Scenarios
 
-Traditional backtests evaluate a strategy using a single historical path. While useful, this approach fails to capture the full distribution of possible outcomes.
+Each scenario simulates 5,000 paths × 252 trading days from $10,000, compounding daily returns
+(vectorized with NumPy, one seed per scenario for reproducibility).
 
-This project addresses that limitation by simulating thousands of potential portfolio paths and analyzing:
+| Scenario | Daily return model |
+|---|---|
+| Baseline normal | Gaussian, mean 0.05%, std 1.0% |
+| Fat-tailed Student-t | t with 5 degrees of freedom, rescaled to the same mean and std as the baseline |
+| Stressed volatility | Gaussian, mean 0.03%, std 1.8% |
+| Historical block bootstrap | 5-day blocks resampled from 1,254 daily SPY returns (2021 to 2026), preserving short-run autocorrelation and volatility clustering |
 
-* How outcomes vary under uncertainty
-* The probability of losses and large drawdowns
-* Sensitivity to different return assumptions
-* Differences between theoretical models and real market behavior
-
----
-
-## Key Idea
-
-Traditional backtesting answers:
-
-> “What happened?”
-
-This project instead asks:
-
-> “What could happen across many plausible futures?”
+Because the Student-t scenario has the same variance as the baseline, any difference between the two comes
+from tail shape alone.
 
 ---
 
-## Features
+## Results
 
-### Monte Carlo Simulation
+| Scenario | Median return | P(loss) | 5% VaR | 5% CVaR | 1% VaR | 1% CVaR | Avg max DD | P(DD ≥ 20%) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Baseline normal | 12.0% | 23.2% | −12.9% | −17.9% | −20.9% | −24.5% | −13.4% | 10.8% |
+| Student-t (df=5) | 12.6% | 23.0% | −13.1% | −18.1% | −20.7% | −25.3% | −13.3% | 10.2% |
+| Stressed volatility | 4.6% | 43.9% | −34.9% | −41.8% | −46.3% | −51.1% | −26.6% | 72.7% |
+| SPY block bootstrap | 12.0% | 24.7% | −13.7% | −19.5% | −23.7% | −28.3% | −14.0% | 14.0% |
 
-* Simulates thousands of potential portfolio paths over a fixed horizon
-* Models compounding effects of daily returns
+VaR and CVaR are on one-year terminal return. In the stressed scenario 0.5% of paths lose more than half their value.
 
-### Multiple Return Models
+![Final value by scenario](assets/scenario_final_value_boxplot.png)
 
-* **Normal distribution** (baseline assumption)
-* **Student-t distribution** (fat tails / extreme events)
-* **Stressed volatility scenario**
-* **Historical block bootstrap (SPY)** using real market data
+| | |
+|---|---|
+| ![Percentile cone, baseline](assets/percentile_cone_normal.png) | ![Drawdowns by scenario](assets/scenario_drawdown_boxplot.png) |
 
-### Risk Metrics
+### What the numbers show
 
-* Final portfolio value distribution
-* Probability of loss
-* Probability of ruin
-* Max drawdown distribution
-* Value-at-Risk (VaR) and Conditional VaR (CVaR)
-* Sharpe ratio, Sortino ratio, Calmar ratio
-
-### Visualizations
-
-* Simulated equity curve fan plots
-* Percentile cone (5th–95th range + median path)
-* Final value distribution histograms
-* Drawdown distribution histograms
-* Cross-scenario comparison boxplots
-
-### Structured Outputs
-
-* Per-scenario:
-
-  * `summary.json`
-  * `path_statistics.csv`
-* Global:
-
-  * `scenario_summary.csv`
-  * `scenario_comparison_paths.csv`
-* Saved plots for all scenarios
+- **Fat daily tails barely move one-year risk.** At equal variance, the Student-t scenario's one-year 1% VaR
+  (−20.7%) is essentially the baseline's (−20.9%). Summed over 252 independent days, fat-tailed daily
+  returns average out toward a normal distribution (central limit theorem). The t-model only shows up in
+  the far tail: worst drawdown −45.8% vs −40.5%, and a slightly deeper 1% CVaR.
+- **Real data is riskier than either i.i.d. model.** The SPY bootstrap raises 1% VaR to −23.7% and the chance
+  of a 20% drawdown from 10.8% to 14.0%, even with a similar median. Resampling 5-day blocks keeps the
+  clustering of bad days that independent draws remove.
+- **Volatility dominates.** Raising daily volatility from 1.0% to 1.8% more than doubles every tail measure and
+  nearly doubles the probability of a loss, a far larger effect than changing the shape of the distribution.
 
 ---
 
-## Project Structure
-
-```text
-quant-risk-simulator/
-│
-├── data/
-│   └── historical_returns.csv        # SPY-based returns for bootstrap
-├── results/
-│   ├── baseline_normal/
-│   ├── fat_tail_student_t/
-│   ├── stressed_volatility/
-│   ├── historical_block_bootstrap/
-│   ├── scenario_summary.csv
-│   └── scenario_comparison_paths.csv
-│
-├── src/
-│   ├── config.py
-│   ├── metrics.py
-│   ├── plots.py
-│   ├── returns.py
-│   └── simulator.py
-│
-├── main.py
-├── requirements.txt
-└── README.md
-```
-
----
-
-## How It Works
-
-1. Generate simulated return paths using a specified model
-2. Convert returns into equity curves via compounding
-3. Compute path-level statistics (returns, drawdowns, ratios)
-4. Aggregate results into distributions and summary metrics
-5. Visualize outcomes and compare across scenarios
-
----
-
-## Sample Outputs
-
-### Simulated Equity Curves
-Example Monte Carlo paths under the baseline normal-return scenario.
-
-![Simulated Equity Curves](results/baseline_normal/equity_curves.png)
-
-### Final Portfolio Value Distribution
-Histogram of terminal portfolio outcomes under the Student-t fat-tail scenario.
-
-![Final Portfolio Value Distribution](results/fat_tail_student_t/final_value_histogram.png)
-
-### Cross-Scenario Comparison
-Comparison of final portfolio outcomes across all modeled scenarios.
-
-![Cross-Scenario Comparison](results/scenario_final_value_boxplot.png)
-
-### Cross-Scenario Drawdown Comparison
-Comparison of maximum drawdowns across scenarios.
-
-![Cross-Scenario Drawdown Comparison](results/scenario_drawdown_boxplot.png)
-
----
-
-## Key Takeaways
-
-- Fat-tailed distributions significantly increase downside risk
-- Volatility drives drawdown severity more than mean returns
-- Historical bootstrapping captures real-world non-normal behavior
-- Positive expected returns do not eliminate loss probability
-
----
-
-## Why This Matters
-
-A single backtest can be misleading.
-
-This project demonstrates that:
-
-* Risk is **distributional**, not deterministic
-* Tail events matter more than average outcomes
-* Strategy evaluation requires **scenario-based analysis**
-* Real market behavior often deviates from idealized assumptions
-
----
-
-## Installation
+## Running it
 
 ```bash
 pip install -r requirements.txt
+python main.py          # writes results/<scenario>/ and cross-scenario plots
+pytest -q               # 17 tests
 ```
 
----
+`data/historical_returns.csv` is built from the SPY data in
+[quant-trading-backtester](https://github.com/kramarker/quant-trading-backtester) by `make_returns.py`.
+If the file is missing, the bootstrap scenario is skipped.
 
-## Run
+Scenarios, path count, horizon, and seed live in [`src/config.py`](src/config.py).
 
-```bash
-python main.py
+## Tests
+
+The suite in [`tests/`](tests) checks the return generators (shape, moments, seed reproducibility,
+Student-t variance rescaling and excess kurtosis, bootstrap drawing only historical values in consecutive
+blocks), equity compounding, max drawdown, VaR/CVaR, annualization, and that the configuration matches the
+design described above.
+
+## Project layout
+
+```
+src/
+  config.py       scenarios and simulation settings
+  returns.py      normal, Student-t, i.i.d. and block bootstrap generators
+  simulator.py    vectorized equity curves and terminal returns
+  metrics.py      path statistics, VaR/CVaR, drawdowns, scenario summaries
+  plots.py        fan charts, percentile cones, histograms, boxplots
+main.py
+make_returns.py   builds historical_returns.csv from SPY prices
+tests/
 ```
 
-or (Windows):
+## Limitations
 
-```bash
-py main.py
-```
+- Each scenario is a single asset with constant parameters; no time-varying volatility or regime changes.
+- The bootstrap only knows the 2021 to 2026 SPY sample, so it cannot produce a crash larger than that window contains.
+- Risk metrics are on one-year terminal values; no intra-year liquidity or margin effects.
 
----
+## Possible extensions
 
-## Data
-
-The historical bootstrap scenario uses daily SPY returns derived from price data to simulate realistic market dynamics.
-
-If `data/historical_returns.csv` is present, the model incorporates real market behavior. Otherwise, the scenario is skipped automatically.
-
----
-
-## Technical Highlights
-
-- Vectorized simulation for efficient large-scale Monte Carlo runs
-- Modular architecture separating return generation, simulation, and metrics
-- Support for multiple stochastic models (Gaussian, Student-t, bootstrap)
-- Robust risk metric computation (VaR, CVaR, drawdowns)
-
----
-
-## Future Improvements
-
-* Regime-switching return models
-* Time-varying volatility
-* Strategy-specific return distributions (from backtests)
-* Multi-asset portfolio simulations
-* Position sizing and leverage modeling
-
----
-
-## Summary
-
-This project provides a framework for understanding portfolio risk beyond single-path backtesting by combining:
-
-* Probabilistic simulation
-* Multiple return models
-* Real market data
-
-to evaluate the full distribution of possible outcomes.
-
-
----
+- GARCH(1,1) scenario to model volatility clustering parametrically
+- Regime-switching returns
+- Multi-asset portfolios with correlated draws
+- Feeding backtested strategy returns from the backtester into the bootstrap
